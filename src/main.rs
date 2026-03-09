@@ -1,8 +1,8 @@
+use pathsearch::find_executable_in_path;
 #[allow(unused_imports)]
 use std::io::{self, Write};
 
 fn main() {
-    // TODO: Uncomment the code below to pass the first stage
  loop{
  print!("$ ");
  io::stdout().flush().unwrap();
@@ -13,25 +13,33 @@ fn main() {
  continue;
 }
  let start = v[0];
- let args =&v[1..];
-match start{
- "type" =>{
- let cmd= args[0];
- match cmd{
-  "echo" | "exit" | "type" =>{
- println!("{cmd} is a shell builtin");
+ if start =="exit"{
+ break;
 }
-
-_=>println!("{cmd}: not found"),
+ eval_command(start,v[1..v.len()].to_vec());
+}}
+fn eval_command(command: &str, args: Vec<&str>){
+ let comm_known=["exit", "echo" , "type"];
+ if !comm_known.contains(&command){
+ println!("{}: command not found",&command);
+ return;
+ }
+ if command=="echo"{
+ for arg in &args{
+ print!("{} ",arg);
 }
+println!();
+return;
 }
-"echo" => {
-println!("{}",args.join(" "));
+ if command=="type"{
+  if comm_known.contains(&args[0]){
+  println!("{} is a shell builtin",&args[0]);
 }
-"exit" =>{
-break;
+  else if let Some(path)= find_executable_in_path(args[0]){
+  println!("{} is {}",args[0],path.display());
 }
-_=>println!("{start}: not found"),
+ else{
+println!("{}: not found",args[0]);
 }
 }
 }
