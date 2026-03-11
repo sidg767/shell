@@ -1,7 +1,7 @@
 use anyhow::{Context,anyhow};
 use strum::{Display, EnumIs, EnumTryAs};
-#[derive(Debug, PartialEq, EnumIs, EnumTryAs, Display)]
 
+#[derive(Debug, PartialEq, EnumIs, EnumTryAs, Display)]
 pub enum Cmd{
   Echo(Comand),
   Exit(u8),
@@ -22,3 +22,17 @@ impl Cmd{
 }
 }
 
+#[derive(Debug, PartialEq, Clone)];
+pub struct Command{
+pub name = String;
+pub path = Option<String>;
+pub args = Vec<String>;
+}
+impl Command{
+pub fn new(name: &str, path:Option<String>, args: Vec<String>) -> Self{
+Self{
+name: name.to_owned(),
+path: path,
+args,
+}
+}
