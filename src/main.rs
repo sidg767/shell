@@ -10,7 +10,7 @@ fn main() {
         io::stdout().flush().unwrap();
         let mut s = String::new();
         io::stdin().read_line(&mut s).unwrap();
-        let v: Vec<&str> = s.trim().split_whitespace().collect();
+        let v: Vec<&str> = s.split_whitespace().collect();
         if v.is_empty() {
             continue;
         }
