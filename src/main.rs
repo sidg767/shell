@@ -2,7 +2,8 @@
 use pathsearch::find_executable_in_path;
 use std::io::{self, Write};
 use std::process::Command;
-use std::str;
+use std::{self, str, env};
+use std::path::PathBuf;
 
 fn main() {
     loop {
@@ -10,7 +11,7 @@ fn main() {
         io::stdout().flush().unwrap();
         let mut s = String::new();
         io::stdin().read_line(&mut s).unwrap();
-        let v: Vec<&str> = s.split_whitespace().collect();
+        let v: Vec<&str> = s.trim().split_whitespace().collect();
         if v.is_empty() {
             continue;
         }
@@ -22,7 +23,11 @@ fn main() {
     }
 }
 fn eval_command(command: &str, args: Vec<&str>) {
-    let comm_known = ["exit", "echo", "type"];
+    let comm_known = ["exit", "echo", "type", "pwd", "cd"];
+    if command == "pwd" {
+        println!("{}", std::env::current_dir().unwrap().display());
+        return;
+    }
     if command == "echo" {
         for arg in &args {
             print!("{} ", arg);
@@ -30,7 +35,6 @@ fn eval_command(command: &str, args: Vec<&str>) {
         println!();
         return;
     }
-
     if command == "type" {
         if comm_known.contains(&args[0]) {
             println!("{} is a shell builtin", &args[0]);
@@ -43,6 +47,21 @@ fn eval_command(command: &str, args: Vec<&str>) {
             return;
         }
     }
+    
+    if command== "cd" {
+    if args.is_empty(){
+   let home=env::var("HOME").unwrap_or("/".to_string());
+   if let Err(e) = env::set_current_dir(home){
+ println!("cd: {}: No such file or directory", e);
+}
+ }
+else{
+if let Err(_) = env::set_current_dir(PathBuf::from (args[0])){
+println!("cd: {}: No such file or directory", &args[0]);
+}
+}
+  return;
+}
     if let Some(_path) = find_executable_in_path(command) {
         let output = Command::new(command)
             .args(&args)
