@@ -1,10 +1,46 @@
 #[allow(unused_imports)]
 use pathsearch::find_executable_in_path;
 use std::io::{self, Write};
-use std::path::PathBuf;
-use std::process::Command;
-use std::{self, env, str};
+use std::{self, 
+    env, 
+    str, 
+    error::Error, 
+    fs::DirEntry,
+    collections::HashMap,
+    ops::ControlFlow,
+    io::Write};
 
+ enum State{
+    Normal,
+    SingleQuote,
+    DoubleQuote,
+    Escape,
+ }   
+ fn FormTokens(input: &str)->Vec<String>{
+   let mut tokens=Vec::new();
+   let mut curr_token=String::new();
+   for c in input.chars(){
+    match state{
+        State::Normal=> match c{
+
+        }
+        State::SingleQuote=>{
+
+        }
+        State::DoubleQuote=>{   
+
+        }
+        State::Escape=>{
+
+        }
+        
+    }
+   }
+   if !curr_token.is_empty(){
+            tokens.push(current);
+        }
+        tokens
+ }
 fn main() {
     loop {
         print!("$ ");
@@ -29,6 +65,7 @@ fn eval_command(command: &str, args: Vec<&str>) {
         return;
     }
     if command == "echo" {
+        if args[0] == "'" {}
         for arg in &args {
             print!("{} ", arg);
         }
@@ -54,7 +91,14 @@ fn eval_command(command: &str, args: Vec<&str>) {
             if let Err(e) = env::set_current_dir(home) {
                 println!("cd: {}: No such file or directory", e);
             }
-        } else {
+        } 
+        else if args[0] =="~" {
+            let home = env::var("HOME").unwrap_or("/".to_string());
+            if let Err(e)=env::set_current_dir(&home){
+                println!("cd: {}: No such file or directory", e);
+            }
+        }       
+        else {
             if let Err(_) = env::set_current_dir(PathBuf::from(args[0])) {
                 println!("cd: {}: No such file or directory", &args[0]);
             }
