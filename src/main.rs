@@ -1,9 +1,9 @@
 #[allow(unused_imports)]
 use pathsearch::find_executable_in_path;
 use std::io::{self, Write};
-use std::process::Command;
-use std::{self, str, env};
 use std::path::PathBuf;
+use std::process::Command;
+use std::{self, env, str};
 
 fn main() {
     loop {
@@ -47,21 +47,20 @@ fn eval_command(command: &str, args: Vec<&str>) {
             return;
         }
     }
-    
-    if command== "cd" {
-    if args.is_empty(){
-   let home=env::var("HOME").unwrap_or("/".to_string());
-   if let Err(e) = env::set_current_dir(home){
- println!("cd: {}: No such file or directory", e);
-}
- }
-else{
-if let Err(_) = env::set_current_dir(PathBuf::from (args[0])){
-println!("cd: {}: No such file or directory", &args[0]);
-}
-}
-  return;
-}
+
+    if command == "cd" {
+        if args.is_empty() {
+            let home = env::var("HOME").unwrap_or("/".to_string());
+            if let Err(e) = env::set_current_dir(home) {
+                println!("cd: {}: No such file or directory", e);
+            }
+        } else {
+            if let Err(_) = env::set_current_dir(PathBuf::from(args[0])) {
+                println!("cd: {}: No such file or directory", &args[0]);
+            }
+        }
+        return;
+    }
     if let Some(_path) = find_executable_in_path(command) {
         let output = Command::new(command)
             .args(&args)
