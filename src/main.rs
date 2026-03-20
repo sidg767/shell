@@ -1,14 +1,17 @@
 #[allow(unused_imports)]
 use pathsearch::find_executable_in_path;
-use std::io::{self, Write};
 use std::{self, 
     env, 
-    str, 
+    str,
+    path::PathBuf,
+    process::Command, 
     error::Error, 
     fs::DirEntry,
     collections::HashMap,
     ops::ControlFlow,
-    io::Write};
+    io,
+    io::Write,
+};
 
  enum State{
     Normal,
@@ -19,35 +22,56 @@ use std::{self,
  fn FormTokens(input: &str)->Vec<String>{
    let mut tokens=Vec::new();
    let mut curr_token=String::new();
+   let mut state = State::Normal;
    for c in input.chars(){
     match state{
         State::Normal=> match c{
-
+                ' ' | '\t' =>{
+                    if !curr_token.is_empty(){
+                        tokens.push(curr_token.clone());
+                        curr_token.clear();
+                    }
+                }
+                '\''=> state=State::SingleQuote,
+                '\"'=> state=State::DoubleQuote,
+                '\\'=> state=State::Escape,
+                _=>curr_token.push(c),
         }
         State::SingleQuote=>{
-
+          if c=='\''{
+            state=State::Normal;
         }
+    else{
+        curr_token.push(c);    }}
         State::DoubleQuote=>{   
-
+            if c=='\"'{
+                state=State::Normal;
+            }
+            else if c=='\\'{
+                state=State::Escape;
+            }
+            else{
+                curr_token.push(c);
+            }
         }
         State::Escape=>{
-
+             curr_token.push(c);
+             state=State::Normal;
         }
-        
     }
    }
-   if !curr_token.is_empty(){
-            tokens.push(current);
-        }
-        tokens
- }
+    if !curr_token.is_empty(){
+        tokens.push(curr_token);
+    }
+    tokens
+}
 fn main() {
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
         let mut s = String::new();
         io::stdin().read_line(&mut s).unwrap();
-        let v: Vec<&str> = s.trim().split_whitespace().collect();
+        let v= FormTokens(s.trim());
         if v.is_empty() {
             continue;
         }
@@ -55,24 +79,24 @@ fn main() {
         if start == "exit" {
             break;
         }
-        eval_command(start, v[1..v.len()].to_vec());
+        eval_command(&start,v[1..v.len()].to_vec());
     }
 }
-fn eval_command(command: &str, args: Vec<&str>) {
+fn eval_command(command: &str, args: Vec<String>) {
     let comm_known = ["exit", "echo", "type", "pwd", "cd"];
     if command == "pwd" {
         println!("{}", std::env::current_dir().unwrap().display());
         return;
     }
     if command == "echo" {
-        if args[0] == "'" {}
-        for arg in &args {
-            print!("{} ", arg);
-        }
-        println!();
+        println!("{}", args.join(" "));
         return;
     }
     if command == "type" {
+        if args.is_empty(){
+ println!("type: missing argument");
+return;
+}
         if comm_known.contains(&args[0]) {
             println!("{} is a shell builtin", &args[0]);
             return;
