@@ -17,7 +17,7 @@ use std::{self,
     Normal,
     SingleQuote,
     DoubleQuote,
-    Escape,
+    Escape(Box<State>),
  }   
  fn FormTokens(input: &str)->Vec<String>{
    let mut tokens=Vec::new();
@@ -34,7 +34,7 @@ use std::{self,
                 }
                 '\''=> state=State::SingleQuote,
                 '\"'=> state=State::DoubleQuote,
-                '\\'=> state=State::Escape,
+                '\\'=> state=State::Escape(Box::new(State::Normal)),
                 _=>curr_token.push(c),
         }
         State::SingleQuote=>{
@@ -48,15 +48,15 @@ use std::{self,
                 state=State::Normal;
             }
             else if c=='\\'{
-                state=State::Escape;
+                state=State::Escape(Box::new(State::DoubleQuote));
             }
             else{
                 curr_token.push(c);
             }
         }
-        State::Escape=>{
+        State::Escape(prev_state)=>{
              curr_token.push(c);
-             state=State::Normal;
+             state=*prev_state;
         }
     }
    }
@@ -75,14 +75,14 @@ fn main() {
         if v.is_empty() {
             continue;
         }
-        let start = v[0];
+        let start = &v[0];
         if start == "exit" {
             break;
         }
-        eval_command(&start,v[1..v.len()].to_vec());
+        eval_command(&start,v[1..].iter().map(|s| s.as_str()).collect());
     }
 }
-fn eval_command(command: &str, args: Vec<String>) {
+fn eval_command(command: &str, args: Vec<&str>) {
     let comm_known = ["exit", "echo", "type", "pwd", "cd"];
     if command == "pwd" {
         println!("{}", std::env::current_dir().unwrap().display());
