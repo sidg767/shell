@@ -12,14 +12,14 @@ use std::{self,
     io,
     io::Write,
 };
-
+#[derive(Clone)]
  enum State{
     Normal,
     SingleQuote,
     DoubleQuote,
     Escape(Box<State>),
  }   
- fn FormTokens(input: &str)->Vec<String>{
+ fn form_tokens(input: &str)->Vec<String>{
    let mut tokens=Vec::new();
    let mut curr_token=String::new();
    let mut state = State::Normal;
@@ -41,8 +41,9 @@ use std::{self,
           if c=='\''{
             state=State::Normal;
         }
-    else{
-        curr_token.push(c);    }}
+          else{
+        curr_token.push(c);    
+    }}
         State::DoubleQuote=>{   
             if c=='\"'{
                 state=State::Normal;
@@ -56,7 +57,10 @@ use std::{self,
         }
         State::Escape(prev_state)=>{
              curr_token.push(c);
-             state=*prev_state;
+             state=(*prev_state).clone();
+             //Escape(Box<State>) involves ownership transfer,
+             //Rust pattern matching + moving values can create subtle behavior
+            //That caused the parser to lose track of correct state briefly
         }
     }
    }
@@ -71,7 +75,7 @@ fn main() {
         io::stdout().flush().unwrap();
         let mut s = String::new();
         io::stdin().read_line(&mut s).unwrap();
-        let v= FormTokens(s.trim());
+        let v= form_tokens(s.trim());
         if v.is_empty() {
             continue;
         }
