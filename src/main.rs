@@ -87,6 +87,28 @@ fn main() {
     }
 }
 fn eval_command(command: &str, args: Vec<&str>) {
+    let mut i = 0;
+while i < args.len() {
+    match args[i].as_str() {
+        ">" => {
+            if i + 1 >= args.len() {
+                println!("syntax error: expected file after >");
+                return;
+            }
+            stdout_redirect = Some(args[i + 1].clone());
+            args.drain(i..=i + 1);
+        }
+        "2>" => {
+            if i + 1 >= args.len() {
+                println!("syntax error: expected file after 2>");
+                return;
+            }
+            stderr_redirect = Some(args[i + 1].clone());
+            args.drain(i..=i + 1);
+        }
+        _ => i += 1,
+    }
+}
     let comm_known = ["exit", "echo", "type", "pwd", "cd"];
     if command == "pwd" {
         println!("{}", std::env::current_dir().unwrap().display());
@@ -135,16 +157,22 @@ return;
     }
     if let Some(_path) = find_executable_in_path(command) {
         let output = Command::new(command)
-            .args(&args)
-            .output()
-            .expect("Invalid command");
-        if output.status.success() {
-            let stdout = str::from_utf8(&output.stdout).expect("Invalid UTF-8 output");
-            print!("{}", stdout);
-        } else {
-            println!("{}: command not found", &command);
-        }
-    } else {
-        println!("{}: command not found", &command);
-    }
+    .args(&args)
+    .output()
+    .expect("failed to execute");
+
+if let Some(file) = stdout_redirect {
+    let mut f = File::create(file).expect("failed to create file");
+    f.write_all(&output.stdout).expect("write failed");
+} else {
+    print!("{}", String::from_utf8_lossy(&output.stdout));
+}
+
+if let Some(file) = stderr_redirect {
+    let mut f = File::create(file).expect("failed to create file");
+    f.write_all(&output.stderr).expect("write failed");
+} else {
+    eprint!("{}", String::from_utf8_lossy(&output.stderr));
+}
+}
 }
