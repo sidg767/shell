@@ -1,7 +1,7 @@
 use crate::utils::path::find_executable;
 
 pub fn run(args: &[String]) {
-    let builtins = ["cd", "echo", "pwd", "type"];
+    let builtins = ["cd", "echo", "pwd", "type", "exit"];
 
     if args.is_empty() {
         println!("type: missing argument");
