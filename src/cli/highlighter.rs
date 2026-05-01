@@ -88,3 +88,28 @@ impl Highlighter for ShellHighlighter {
 
         Cow::Owned(out)
     }
+
+    fn highlight_char(&self, line: &str, pos: usize, _kind: rustyline::highlight::CmdKind) -> bool {
+        line.as_bytes().get(pos).map_or(false, |&b| {
+            matches!(b, b'(' | b')' | b'[' | b']' | b'{' | b'}' | b'"' | b'\'')
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum HighlightState {
+    Normal,
+    Escaped,
+    SingleQuote,
+    DoubleQuote,
+}
+
+fn needs_highlighting(line: &str) -> bool {
+    line.bytes().any(|b| matches!(b, b'\\' | b'\'' | b'"' | b'|' | b';' | b'&'))
+}
+
+fn push_colored(out: &mut String, text: &str, color: &str) {
+    out.push_str(color);
+    out.push_str(text);
+    out.push_str(RESET);
+}
