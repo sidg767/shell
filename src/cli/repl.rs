@@ -178,5 +178,84 @@ impl Shell {
         let _ = left_child.wait();
         let _ = right_child.wait();
     }
+ fn spawn_external(
+        &self,
+        cmd: &str,
+        args: Vec<&str>,
+        stdin:  Option<Stdio>,
+        stdout: Option<Stdio>,
+    ) {
+        let mut builder = Command::new(cmd);
+        builder.args(&args);
+
+        if let Some(s) = stdin  { builder.stdin(s);  }
+        if let Some(s) = stdout { builder.stdout(s); }
+
+        match builder.spawn() {
+            Ok(mut child) => { let _ = child.wait(); }
+            Err(e) => eprintln!("{}: {}", cmd, e),
+        }
+    }
+
+    fn builtin_cd(&self, args: Vec<&str>) {
+        let target = args.first()
+            .map(|s| Path::new(s))
+            .unwrap_or_else(|| Path::new("."));
+
+        if let Err(e) = std::env::set_current_dir(target) {
+            eprintln!("cd: {}", e);
+        }
+    }
+
+    fn builtin_echo(&self, args: Vec<&str>) {
+        println!("{}", args.join(" "));
+    }
+
+    fn builtin_pwd(&self) {
+        match std::env::current_dir() {
+            Ok(path) => println!("{}", path.display()),
+            Err(e)   => eprintln!("pwd: {}", e),
+        }
+    }
+
+    fn builtin_type(&self, args: Vec<&str>) {
+        for name in args {
+            if ["cd","echo","pwd","type","exit"].contains(&name) {
+                println!("{} is a shell builtin", name);
+            } else if let Some(path) = find_in_path(name) {
+                println!("{} is {}", name, path);
+            } else {
+                eprintln!("{}: not found", name);
+            }
+        }
+    }
 }
+
+fn build_prompt() -> String {
+    let cwd = std::env::current_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| "?".to_string());
+
+    format!("{} $ ", cwd)
+}
+
+fn parse_command(input: &str) -> (&str, Vec<&str>) {
+    let mut parts = input.split_whitespace();
+    let cmd  = parts.next().unwrap_or("");
+    let args = parts.collect();
+    (cmd, args)
+}
+
+fn find_in_path(name: &str) -> Option<String> {
+    let path_var = std::env::var("PATH").ok()?;
+
+    path_var.split(':')
+        .map(|dir| format!("{}/{}", dir, name))
+        .find(|full| Path::new(full).is_file())
+}
+
+pub fn start() -> rustyline::Result<()> {
+    Shell::new()?.start()
+}
+
    
