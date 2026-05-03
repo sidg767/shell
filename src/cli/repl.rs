@@ -90,4 +90,93 @@ impl Shell {
 
         Ok(Self { editor })
     }
+    pub fn start(&mut self) -> rustyline::Result<()> {
+        loop {
+            let prompt = build_prompt();
 
+            match self.editor.readline(&prompt) {
+                Ok(line) => {
+                    let line = line.trim().to_owned();
+
+                    if line.is_empty() {
+                        continue;
+                    }
+
+                    self.editor.add_history_entry(&line)?;
+                    self.handle_line(&line);
+                }
+
+                Err(ReadlineError::Interrupted) => {
+                    eprintln!("^C");
+                    continue;
+                }
+
+                Err(ReadlineError::Eof) => {
+                    break;
+                }
+
+                Err(err) => {
+                    eprintln!("error: {}", err);
+                    break;
+                }
+            }
+        }
+
+        let _ = self.editor.save_history(HISTORY_FILE);
+        Ok(())
+    }
+
+    fn handle_line(&self, line: &str) {
+        let pipeline: Vec<&str> = line.splitn(2, '|').collect();
+
+        if pipeline.len() == 2 {
+            self.run_pipeline(pipeline[0].trim(), pipeline[1].trim());
+        } else {
+            let (cmd, args) = parse_command(line);
+            self.run_command(cmd, args);
+        }
+    }
+
+    fn run_command(&self, cmd: &str, args: Vec<&str>) {
+        match cmd {
+            "exit" => std::process::exit(0),
+            "cd"   => self.builtin_cd(args),
+            "echo" => self.builtin_echo(args),
+            "pwd"  => self.builtin_pwd(),
+            "type" => self.builtin_type(args),
+            _      => self.spawn_external(cmd, args, None, None),
+        }
+    }
+
+    fn run_pipeline(&self, left: &str, right: &str) {
+        let (lcmd, largs) = parse_command(left);
+        let (rcmd, rargs) = parse_command(right);
+
+        let mut left_child = match Command::new(lcmd)
+            .args(&largs)
+            .stdout(Stdio::piped())
+            .spawn()
+        {
+            Ok(c)  => c,
+            Err(e) => { eprintln!("{}: {}", lcmd, e); return; }
+        };
+
+        let stdin = match left_child.stdout.take() {
+            Some(s) => Stdio::from(s),
+            None    => { eprintln!("pipeline: failed to capture stdout"); return; }
+        };
+
+        let mut right_child = match Command::new(rcmd)
+            .args(&rargs)
+            .stdin(stdin)
+            .spawn()
+        {
+            Ok(c)  => c,
+            Err(e) => { eprintln!("{}: {}", rcmd, e); return; }
+        };
+
+        let _ = left_child.wait();
+        let _ = right_child.wait();
+    }
+}
+   
