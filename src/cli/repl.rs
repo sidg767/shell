@@ -66,3 +66,28 @@ impl rustyline::validate::Validator for ShellHelper {
         self.validator.validate(ctx)
     }
 }
+impl Shell {
+    pub fn new() -> rustyline::Result<Self> {
+        let helper = ShellHelper {
+            completer:   ShellCompleter::new(),
+            highlighter: ShellHighlighter::new(),
+            hinter:      ShellHinter::new(),
+            validator:   ShellValidator::new(),
+        };
+
+        let mut editor = Editor::new()?;
+        editor.set_helper(Some(helper));
+        editor.set_history_max_len(HISTORY_LIMIT)?;
+
+        if Path::new(HISTORY_FILE).exists() {
+            let _ = editor.load_history(HISTORY_FILE);
+        }
+
+        editor.bind_sequence(
+            KeyEvent(KeyCode::Tab, Modifiers::NONE),
+            EventHandler::Simple(Cmd::Complete),
+        );
+
+        Ok(Self { editor })
+    }
+
