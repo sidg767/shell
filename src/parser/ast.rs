@@ -19,8 +19,8 @@ pub struct Pipeline {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LogicOp {
-    And, // &&
-    Or,  // ||
+    And,  // &&
+    Or,   // ||
     Semi, // ;
 }
 

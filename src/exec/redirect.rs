@@ -2,9 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::process::Output;
 
-pub fn handle_redirects(mut args: Vec<String>) 
-    -> (Vec<String>, Option<String>, Option<String>) 
-{
+pub fn handle_redirects(mut args: Vec<String>) -> (Vec<String>, Option<String>, Option<String>) {
     let mut stdout_redirect = None;
     let mut stderr_redirect = None;
 

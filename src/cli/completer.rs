@@ -1,14 +1,13 @@
-use rustyline::completion::{Completer, Pair};
 use rustyline::Context;
+use rustyline::Helper;
+use rustyline::completion::{Completer, Pair};
+use rustyline::highlight::Highlighter;
+use rustyline::hint::{Hinter, HistoryHinter};
+use rustyline::validate::Validator;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use rustyline::hint::{Hinter, HistoryHinter};
-use rustyline::highlight::Highlighter;
-use rustyline::validate::Validator;
-use rustyline::Helper;
 
 const BUILTINS: &[&str] = &["cd", "echo", "pwd", "type", "exit"];
-#[derive(Default)]
 pub struct ShellCompleter {
     history_hinter: HistoryHinter,
 }
@@ -19,6 +18,12 @@ impl ShellCompleter {
         Self {
             history_hinter: HistoryHinter {},
         }
+    }
+}
+
+impl Default for ShellCompleter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -96,7 +101,9 @@ fn collect_path_executables(word: &str, candidates: &mut Vec<Pair>) {
                 continue;
             }
 
-            let Ok(metadata) = entry.metadata() else { continue };
+            let Ok(metadata) = entry.metadata() else {
+                continue;
+            };
             let is_executable = metadata.permissions().mode() & 0o111 != 0;
 
             if metadata.is_file() && is_executable {
@@ -130,14 +137,16 @@ fn collect_filesystem(word: &str, candidates: &mut Vec<Pair>) {
             continue;
         }
 
-        let is_dir = entry.file_type()
-            .map(|ft| ft.is_dir())
-            .unwrap_or(false);
+        let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
 
         let replacement = if search_dir == "." {
             if is_dir { format!("{}/", name) } else { name }
         } else {
-            if is_dir { format!("{}{}/", search_dir, name) } else { format!("{}{}", search_dir, name) }
+            if is_dir {
+                format!("{}{}/", search_dir, name)
+            } else {
+                format!("{}{}", search_dir, name)
+            }
         };
 
         candidates.push(Pair {
@@ -149,7 +158,8 @@ fn collect_filesystem(word: &str, candidates: &mut Vec<Pair>) {
 
 fn extract_word(line: &str, pos: usize) -> (usize, &str) {
     let line = &line[..pos];
-    let start = line.rfind(|c: char| c == ' ' || c == '|' || c == ';')
+    let start = line
+        .rfind(|c: char| c == ' ' || c == '|' || c == ';')
         .map(|i| i + 1)
         .unwrap_or(0);
     (start, &line[start..])

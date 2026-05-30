@@ -12,9 +12,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut curr_token = String::new();
     let mut state = State::Normal;
-    
+
     let mut chars = input.chars().peekable();
-    
+
     while let Some(c) = chars.next() {
         match state {
             State::Normal => match c {
@@ -101,10 +101,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             }
         }
     }
-    
+
     if !curr_token.is_empty() {
         tokens.push(Token::Word(curr_token));
     }
-    
+
     tokens
 }
