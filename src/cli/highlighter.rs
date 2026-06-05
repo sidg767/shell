@@ -1,11 +1,11 @@
 use rustyline::highlight::Highlighter;
 use std::borrow::Cow;
 
-const RESET:   &str = "\x1b[0m";
+const RESET: &str = "\x1b[0m";
 const MAGENTA: &str = "\x1b[35m";
-const GREEN:   &str = "\x1b[32m";
-const YELLOW:  &str = "\x1b[33m";
-const BOLD:    &str = "\x1b[1m";
+const GREEN: &str = "\x1b[32m";
+const YELLOW: &str = "\x1b[33m";
+const BOLD: &str = "\x1b[1m";
 
 #[derive(Default)]
 pub struct ShellHighlighter;
@@ -26,10 +26,10 @@ impl Highlighter for ShellHighlighter {
         let mut chars = line.char_indices().peekable();
         let mut state = HighlightState::Normal;
 
-        while let Some((byte_pos, ch)) = chars.next() {
+        while let Some((_, ch)) = chars.next() {
             match (&state, ch) {
                 (HighlightState::Escaped, _) => {
-                    push_colored(&mut out, &line[byte_pos..byte_pos + ch.len_utf8()], MAGENTA);
+                    push_colored(&mut out, ch.encode_utf8(&mut [0; 4]), MAGENTA);
                     state = HighlightState::Normal;
                 }
 
@@ -63,8 +63,7 @@ impl Highlighter for ShellHighlighter {
                     state = HighlightState::Normal;
                 }
 
-                (HighlightState::SingleQuote, _)
-                | (HighlightState::DoubleQuote, _) => {
+                (HighlightState::SingleQuote, _) | (HighlightState::DoubleQuote, _) => {
                     out.push_str(YELLOW);
                     out.push(ch);
                     out.push_str(RESET);
@@ -90,12 +89,22 @@ impl Highlighter for ShellHighlighter {
     }
 
     fn highlight_char(&self, line: &str, pos: usize, _kind: rustyline::highlight::CmdKind) -> bool {
-        line.as_bytes().get(pos).map_or(false, |&b| {
-            matches!(b, b'(' | b')' | b'[' | b']' | b'{' | b'}' | b'"' | b'\'')
-        })
+        let bytes = line.as_bytes();
+
+        let idx = if pos < bytes.len() {
+            pos
+        } else if pos > 0 {
+            pos - 1
+        } else {
+            return false;
+        };
+
+        matches!(
+            bytes[idx],
+            b'(' | b')' | b'[' | b']' | b'{' | b'}' | b'"' | b'\''
+        )
     }
 }
-
 #[derive(Debug, PartialEq)]
 enum HighlightState {
     Normal,
@@ -103,11 +112,10 @@ enum HighlightState {
     SingleQuote,
     DoubleQuote,
 }
-
 fn needs_highlighting(line: &str) -> bool {
-    line.bytes().any(|b| matches!(b, b'\\' | b'\'' | b'"' | b'|' | b';' | b'&'))
+    line.bytes()
+        .any(|b| matches!(b, b'\\' | b'\'' | b'"' | b'|' | b';' | b'&'))
 }
-
 fn push_colored(out: &mut String, text: &str, color: &str) {
     out.push_str(color);
     out.push_str(text);

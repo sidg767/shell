@@ -24,11 +24,12 @@ impl Validator for ShellValidator {
         let input = ctx.input();
 
         match check_input(input) {
-            InputStatus::Complete     => Ok(ValidationResult::Valid(None)),
-            InputStatus::Incomplete   => Ok(ValidationResult::Incomplete),
-            InputStatus::Invalid(msg) => Ok(ValidationResult::Invalid(
-                Some(format!("\n  error: {}", msg))
-            )),
+            InputStatus::Complete => Ok(ValidationResult::Valid(None)),
+            InputStatus::Incomplete => Ok(ValidationResult::Incomplete),
+            InputStatus::Invalid(msg) => Ok(ValidationResult::Invalid(Some(format!(
+                "\n  error: {}",
+                msg
+            )))),
         }
     }
 }
@@ -41,13 +42,12 @@ enum InputStatus {
 }
 
 fn check_input(input: &str) -> InputStatus {
-    let mut state      = QuoteState::Normal;
+    let mut state = QuoteState::Normal;
     let mut depth_paren: i32 = 0;
     let mut depth_brace: i32 = 0;
 
     for ch in input.chars() {
         match (&state, ch) {
-
             (QuoteState::EscapedInNormal, _) => {
                 state = QuoteState::Normal;
             }
@@ -108,8 +108,12 @@ fn check_input(input: &str) -> InputStatus {
         QuoteState::Normal => {}
     }
 
-    if depth_paren > 0 { return InputStatus::Incomplete; }
-    if depth_brace > 0 { return InputStatus::Incomplete; }
+    if depth_paren > 0 {
+        return InputStatus::Incomplete;
+    }
+    if depth_brace > 0 {
+        return InputStatus::Incomplete;
+    }
 
     InputStatus::Complete
 }

@@ -1,12 +1,23 @@
-use rustyline::completion::FilenameCompleter;
+//! Current implementation has three layers: The Shell Runtime layer handles the core REPL loop,
+//! prompt generation, command parsing, built-in commands, process execution, pipeline execution,
+//! and history management. The Rustyline layer provides features like completion, syntax highlighting,
+//! hints, validation, and history navigation. The Operating System layer is responsible for process
+//! spawning, PATH lookup, current directory management, and pipes.
+//!
+//!
+//!
+//!
+
+/// Represents errors that can occur while reading user input.
 use rustyline::error::ReadlineError;
-use rustyline::history::DefaultHistory;
+use rustyline::history::{DefaultHistory, History};
+/// Provides: line editing, history, completion, keyboard key bindings, cursor movement,
 use rustyline::{Cmd, Editor, EventHandler, KeyCode, KeyEvent, Modifiers};
 
-use crate::completer::ShellCompleter;
-use crate::highlighter::ShellHighlighter;
-use crate::hinter::ShellHinter;
-use crate::validator::ShellValidator;
+use super::completer::ShellCompleter;
+use super::highlighter::ShellHighlighter;
+use super::hinter::ShellHinter;
+use super::validator::ShellValidator;
 
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -14,19 +25,24 @@ use std::process::{Command, Stdio};
 const HISTORY_FILE: &str = ".shell_history";
 const HISTORY_LIMIT: usize = 1000;
 
-#[derive(Debug)]
+/// The Shell struct encapsulates the REPL loop and command handling logic. It uses Rustyline for
+/// input handling, and delegates completion, highlighting, hints, and validation to helper structs.
+/// The Shell supports built in commands like cd, echo, pwd, type, and exit, as well as external
+///  commands found in the PATH. It also supports simple pipelines using the | operator. The REPL
+///  loop handles user input, manages history, and gracefully handles interrupts and EOF. The Shell
+///  is designed to be modular, with clear separation between the REPL logic, Rustyline integration,
+///  and OS interactions.
 pub struct Shell {
     editor: Editor<ShellHelper, DefaultHistory>,
 }
 
-#[derive(rustyline::Helper)]
 pub struct ShellHelper {
     completer: ShellCompleter,
     highlighter: ShellHighlighter,
     hinter: ShellHinter,
     validator: ShellValidator,
 }
-
+impl rustyline::Helper for ShellHelper {}
 impl rustyline::completion::Completer for ShellHelper {
     type Candidate = rustyline::completion::Pair;
 
@@ -39,7 +55,11 @@ impl rustyline::completion::Completer for ShellHelper {
         self.completer.complete(line, pos, ctx)
     }
 }
-
+impl ShellHinter {
+    pub fn new() -> Self {
+        Self
+    }
+}
 impl rustyline::hint::Hinter for ShellHelper {
     type Hint = String;
 
@@ -57,7 +77,6 @@ impl rustyline::highlight::Highlighter for ShellHelper {
         self.highlighter.highlight_char(line, pos, kind)
     }
 }
-
 impl rustyline::validate::Validator for ShellHelper {
     fn validate(
         &self,
@@ -77,7 +96,7 @@ impl Shell {
 
         let mut editor = Editor::new()?;
         editor.set_helper(Some(helper));
-        editor.set_history_max_len(HISTORY_LIMIT)?;
+        editor.history_mut().set_max_len(HISTORY_LIMIT);
 
         if Path::new(HISTORY_FILE).exists() {
             let _ = editor.load_history(HISTORY_FILE);
