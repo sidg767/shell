@@ -1,45 +1,50 @@
-use std::fs::File;
-use std::io::Write;
-use std::process::Output;
+use std::fs::{File, OpenOptions};
+use std::process::Stdio;
 
-pub fn handle_redirects(mut args: Vec<String>) -> (Vec<String>, Option<String>, Option<String>) {
-    let mut stdout_redirect = None;
-    let mut stderr_redirect = None;
+use crate::error::shell_error::ShellError;
+use crate::parser::ast::Redirect;
 
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            ">" => {
-                stdout_redirect = Some(args[i + 1].clone());
-                args.drain(i..=i + 1);
+pub struct StdioRedirects {
+    pub stdin: Option<Stdio>,
+    pub stdout: Option<Stdio>,
+}
+
+pub fn handle_redirects(redirects: &[Redirect]) -> Result<StdioRedirects, ShellError> {
+    let mut stdin_res = None;
+    let mut stdout_res = None;
+
+    for redirect in redirects {
+        match redirect {
+            Redirect::In(file) => {
+                let f = File::open(file).map_err(|e| ShellError::OpenFile {
+                    path: file.clone(),
+                    source: e,
+                })?;
+                stdin_res = Some(Stdio::from(f));
             }
-            "2>" => {
-                stderr_redirect = Some(args[i + 1].clone());
-                args.drain(i..=i + 1);
+            Redirect::Out(file) => {
+                let f = File::create(file).map_err(|e| ShellError::OpenFile {
+                    path: file.clone(),
+                    source: e,
+                })?;
+                stdout_res = Some(Stdio::from(f));
             }
-            _ => i += 1,
+            Redirect::Append(file) => {
+                let f = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(file)
+                    .map_err(|e| ShellError::OpenFile {
+                        path: file.clone(),
+                        source: e,
+                    })?;
+                stdout_res = Some(Stdio::from(f));
+            }
         }
     }
 
-    (args, stdout_redirect, stderr_redirect)
-}
-
-pub fn write_output(
-    output: Output,
-    stdout_redirect: Option<String>,
-    stderr_redirect: Option<String>,
-) {
-    if let Some(file) = stdout_redirect {
-        let mut f = File::create(file).unwrap();
-        f.write_all(&output.stdout).unwrap();
-    } else {
-        print!("{}", String::from_utf8_lossy(&output.stdout));
-    }
-
-    if let Some(file) = stderr_redirect {
-        let mut f = File::create(file).unwrap();
-        f.write_all(&output.stderr).unwrap();
-    } else {
-        eprint!("{}", String::from_utf8_lossy(&output.stderr));
-    }
+    Ok(StdioRedirects {
+        stdin: stdin_res,
+        stdout: stdout_res,
+    })
 }
