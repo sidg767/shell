@@ -1,5 +1,6 @@
 use crate::lexer::tokens::Token;
 use crate::parser::ast::{AndOrList, AstNode, Command, LogicOp, Pipeline, Redirect};
+use crate::error::shell_error::ShellError;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -23,12 +24,12 @@ impl Parser {
         token
     }
 
-    pub fn parse(&mut self) -> Result<AstNode, String> {
+    pub fn parse(&mut self) -> Result<AstNode, ShellError> {
         let list = self.parse_and_or_list()?;
         Ok(AstNode { list })
     }
 
-    fn parse_and_or_list(&mut self) -> Result<AndOrList, String> {
+    fn parse_and_or_list(&mut self) -> Result<AndOrList, ShellError> {
         let mut pipelines = Vec::new();
 
         if self.peek().is_none() {
@@ -69,7 +70,7 @@ impl Parser {
         Ok(AndOrList { pipelines })
     }
 
-    fn parse_pipeline(&mut self) -> Result<Pipeline, String> {
+    fn parse_pipeline(&mut self) -> Result<Pipeline, ShellError> {
         let mut commands = Vec::new();
 
         loop {
@@ -87,7 +88,7 @@ impl Parser {
         Ok(Pipeline { commands })
     }
 
-    fn parse_command(&mut self) -> Result<Command, String> {
+    fn parse_command(&mut self) -> Result<Command, ShellError> {
         let mut name = String::new();
         let mut args = Vec::new();
         let mut redirects = Vec::new();
@@ -118,7 +119,7 @@ impl Parser {
                             _ => unreachable!(),
                         }
                     } else {
-                        return Err("Expected file after redirect operator".to_string());
+                        return Err(ShellError::SyntaxError { token: format!("{:?}", op) });
                     }
                 }
                 _ => break,
@@ -126,7 +127,7 @@ impl Parser {
         }
 
         if !name_set && redirects.is_empty() {
-            return Err("Expected command or redirection".to_string());
+            return Err(ShellError::EmptyCommand);
         }
 
         Ok(Command {

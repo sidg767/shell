@@ -20,7 +20,6 @@ use super::hinter::ShellHinter;
 use super::validator::ShellValidator;
 
 use std::path::Path;
-use std::process::{Command, Stdio};
 
 const HISTORY_FILE: &str = ".shell_history";
 const HISTORY_LIMIT: usize = 1000;
@@ -146,118 +145,16 @@ impl Shell {
     }
 
     fn handle_line(&self, line: &str) {
-        let pipeline: Vec<&str> = line.splitn(2, '|').collect();
-
-        if pipeline.len() == 2 {
-            self.run_pipeline(pipeline[0].trim(), pipeline[1].trim());
-        } else {
-            let (cmd, args) = parse_command(line);
-            self.run_command(cmd, args);
-        }
-    }
-
-    fn run_command(&self, cmd: &str, args: Vec<&str>) {
-        match cmd {
-            "exit" => std::process::exit(0),
-            "cd" => self.builtin_cd(args),
-            "echo" => self.builtin_echo(args),
-            "pwd" => self.builtin_pwd(),
-            "type" => self.builtin_type(args),
-            _ => self.spawn_external(cmd, args, None, None),
-        }
-    }
-
-    fn run_pipeline(&self, left: &str, right: &str) {
-        let (lcmd, largs) = parse_command(left);
-        let (rcmd, rargs) = parse_command(right);
-
-        let mut left_child = match Command::new(lcmd)
-            .args(&largs)
-            .stdout(Stdio::piped())
-            .spawn()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("{}: {}", lcmd, e);
-                return;
+        let tokens = crate::lexer::tokenizer::tokenize(line);
+        let mut parser = crate::parser::parser::Parser::new(tokens);
+        
+        match parser.parse() {
+            Ok(ast) => {
+                if let Err(e) = crate::exec::executor::execute_ast(&ast) {
+                    eprintln!("shell execution error: {}", e);
+                }
             }
-        };
-
-        let stdin = match left_child.stdout.take() {
-            Some(s) => Stdio::from(s),
-            None => {
-                eprintln!("pipeline: failed to capture stdout");
-                return;
-            }
-        };
-
-        let mut right_child = match Command::new(rcmd).args(&rargs).stdin(stdin).spawn() {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("{}: {}", rcmd, e);
-                return;
-            }
-        };
-
-        let _ = left_child.wait();
-        let _ = right_child.wait();
-    }
-    fn spawn_external(
-        &self,
-        cmd: &str,
-        args: Vec<&str>,
-        stdin: Option<Stdio>,
-        stdout: Option<Stdio>,
-    ) {
-        let mut builder = Command::new(cmd);
-        builder.args(&args);
-
-        if let Some(s) = stdin {
-            builder.stdin(s);
-        }
-        if let Some(s) = stdout {
-            builder.stdout(s);
-        }
-
-        match builder.spawn() {
-            Ok(mut child) => {
-                let _ = child.wait();
-            }
-            Err(e) => eprintln!("{}: {}", cmd, e),
-        }
-    }
-
-    fn builtin_cd(&self, args: Vec<&str>) {
-        let target = args
-            .first()
-            .map(|s| Path::new(s))
-            .unwrap_or_else(|| Path::new("."));
-
-        if let Err(e) = std::env::set_current_dir(target) {
-            eprintln!("cd: {}", e);
-        }
-    }
-
-    fn builtin_echo(&self, args: Vec<&str>) {
-        println!("{}", args.join(" "));
-    }
-
-    fn builtin_pwd(&self) {
-        match std::env::current_dir() {
-            Ok(path) => println!("{}", path.display()),
-            Err(e) => eprintln!("pwd: {}", e),
-        }
-    }
-
-    fn builtin_type(&self, args: Vec<&str>) {
-        for name in args {
-            if ["cd", "echo", "pwd", "type", "exit"].contains(&name) {
-                println!("{} is a shell builtin", name);
-            } else if let Some(path) = find_in_path(name) {
-                println!("{} is {}", name, path);
-            } else {
-                eprintln!("{}: not found", name);
-            }
+            Err(e) => eprintln!("shell parse error: {}", e),
         }
     }
 }
@@ -270,21 +167,7 @@ fn build_prompt() -> String {
     format!("{} $ ", cwd)
 }
 
-fn parse_command(input: &str) -> (&str, Vec<&str>) {
-    let mut parts = input.split_whitespace();
-    let cmd = parts.next().unwrap_or("");
-    let args = parts.collect();
-    (cmd, args)
-}
 
-fn find_in_path(name: &str) -> Option<String> {
-    let path_var = std::env::var("PATH").ok()?;
-
-    path_var
-        .split(':')
-        .map(|dir| format!("{}/{}", dir, name))
-        .find(|full| Path::new(full).is_file())
-}
 
 pub fn start() -> rustyline::Result<()> {
     Shell::new()?.start()
