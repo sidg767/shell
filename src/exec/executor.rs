@@ -59,11 +59,7 @@ fn execute_pipeline(pipeline: &Pipeline) -> Result<i32, ShellError> {
     let len = pipeline.commands.len();
 
     for (i, cmd) in pipeline.commands.iter().enumerate() {
-        let stdin = if let Some(stdout) = previous_stdout.take() {
-            Some(Stdio::from(stdout))
-        } else {
-            None
-        };
+        let stdin = previous_stdout.take().map(Stdio::from);
 
         let stdout = if i < len - 1 {
             Some(Stdio::piped())
