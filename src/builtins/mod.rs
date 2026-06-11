@@ -16,10 +16,7 @@ pub fn handle(cmd: &str, args: &[String]) -> Option<Result<i32, ShellError>> {
             echo::run(args);
             Some(Ok(0))
         }
-        "pwd" => {
-            pwd::run();
-            Some(Ok(0))
-        }
+        "pwd" => Some(pwd::run()),
         "type" => {
             r#type::run(args);
             Some(Ok(0))
