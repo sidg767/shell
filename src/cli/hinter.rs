@@ -6,7 +6,7 @@ pub struct ShellHinter;
 impl Hinter for ShellHinter {
     type Hint = String;
 
-    fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<String> {
+    fn hint(&self, line: &str, _pos: usize, _ctx: &Context<'_>) -> Option<String> {
         if line.is_empty() {
             return Some("Type a command...".to_string());
         }

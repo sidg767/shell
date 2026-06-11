@@ -108,7 +108,7 @@ impl Parser {
                 Some(Token::RedirectIn)
                 | Some(Token::RedirectOut)
                 | Some(Token::RedirectAppend) => {
-                    let op = self.advance().unwrap().clone();
+                    let op = self.advance().cloned().ok_or(ShellError::UnexpectedEof { context: "redirect" })?;
                     if let Some(Token::Word(file)) = self.peek() {
                         let file = file.clone();
                         self.advance();

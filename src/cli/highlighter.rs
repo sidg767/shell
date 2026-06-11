@@ -23,10 +23,10 @@ impl Highlighter for ShellHighlighter {
         }
 
         let mut out = String::with_capacity(line.len() * 4);
-        let mut chars = line.char_indices().peekable();
+        let chars = line.char_indices().peekable();
         let mut state = HighlightState::Normal;
 
-        while let Some((_, ch)) = chars.next() {
+        for (_, ch) in chars {
             match (&state, ch) {
                 (HighlightState::Escaped, _) => {
                     push_colored(&mut out, ch.encode_utf8(&mut [0; 4]), MAGENTA);
