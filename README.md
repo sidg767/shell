@@ -1,22 +1,22 @@
 # Rust Shell
 
-A simple, lightweight, and extensible command-line shell written in Rust.
+A simple, lightweight command-line shell written in Rust.
 
-This project implements a custom shell with basic pipeline support, built-in commands, and an interactive REPL using [`rustyline`](https://github.com/kkawakam/rustyline) to provide advanced terminal features such as history, auto-completion, hinting, syntax highlighting, and input validation.
+This project implements a custom shell with basic parsing, built-in commands, and an interactive REPL using [`rustyline`](https://github.com/kkawakam/rustyline) for history, completion, hints, and input validation.
 
 ## Features
 
-- **Interactive REPL**: A responsive command-line interface with a dynamic prompt displaying the current working directory.
-- **Built-in Commands**: Fast, native execution of common utilities:
+- **Interactive REPL**: Reads commands from the user and executes them.
+- **Built-in Commands**:
   - `cd` - Change the current directory.
   - `pwd` - Print the working directory.
   - `echo` - Print text to standard output.
-  - `type` - Indicate how a command name is interpreted (builtin or external executable).
+  - `type` - Shows whether a command is a builtin or external executable.
   - `exit` - Terminate the shell.
-- **External Command Execution**: Seamlessly spawns and executes external binaries found in your system's `$PATH`.
-- **Pipeline Support**: Supports basic piping (`|`) between commands, chaining the standard output of the left command to the standard input of the right command.
-- **Persistent History**: Keeps track of your command history across sessions (stored in `.shell_history`).
-- **Extensible Architecture**: Modular design separating lexical analysis (`lexer`), parsing (`parser`), environment management (`env`), and command execution (`exec`).
+- **External Command Execution**: Spawns and runs external binaries from the system `$PATH`.
+- **Pipeline Support**: Supports simple pipelines using `|` between commands.
+- **Persistent History**: Saves command history across sessions in `.shell_history`.
+- **Rustyline Integration**: Provides completion, history hints, syntax highlighting, and basic input validation.
 
 ## Getting Started
 
@@ -48,19 +48,16 @@ This project implements a custom shell with basic pipeline support, built-in com
 
 ## Project Structure
 
-The codebase is organized into several modules for clear separation of concerns:
+The codebase is organized into modules with clear responsibility boundaries:
 
 - `src/main.rs` & `src/lib.rs`: Entry points and module declarations.
-- `src/cli/`: Handles the interactive REPL loop, terminal input, and Rustyline integration.
-- `src/builtins/`: Implementation of built-in commands (`cd`, `echo`, `pwd`, `type`).
-- `src/lexer/`: Tokenizer responsible for lexical analysis of user input.
-- `src/parser/`: Converts tokens into an Abstract Syntax Tree (AST).
-- `src/exec/`: Handles the execution of commands, processes, and pipelines.
-- `src/env/`: Environment variable management.
-- `src/jobs/`: Job control (background/foreground processes).
-- `src/signals/`: Terminal signal handling (e.g., `SIGINT`, `SIGTERM`).
-- `src/error/`: Centralized error handling types and utilities.
-- `src/utils/`: Common helper functions used across the project.
+- `src/cli/`: REPL loop and Rustyline helper components for completion, hints, validation, and highlighting.
+- `src/builtins/`: Built-in command implementations.
+- `src/lexer/`: Tokenizes user input.
+- `src/parser/`: Builds an AST from tokens and supports pipelines and command separators.
+- `src/exec/`: Executes built-ins and external commands and handles pipelines.
+- `src/error/`: Defines shell error types.
+- `src/utils/`: Shared utility functions.
 
 ## Dependencies
 
@@ -68,5 +65,5 @@ The codebase is organized into several modules for clear separation of concerns:
 - [`rustyline`](https://crates.io/crates/rustyline): Readline implementation for Rust.
 - [`thiserror`](https://crates.io/crates/thiserror): Derive macros for custom errors.
 - [`bytes`](https://crates.io/crates/bytes): Utilities for working with bytes.
-- [`pathsearch`](https://crates.io/crates/pathsearch): Simple tool to find executables in the system PATH.
+- [`pathsearch`](https://crates.io/crates/pathsearch): Finds executables in the system PATH.
 
